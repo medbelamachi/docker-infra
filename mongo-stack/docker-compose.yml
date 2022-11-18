@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  mongodb:
+    container_name: mongodb
+    image: mongo
+    environment:
+      - MONGO_INITDB_DATABASE=test
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+    networks:
+      - mongo-network
+    ports:
+      - "27017:27017"
+    volumes:
+      - type: volume
+        source: mongoDb
+        target: /data/db
+      - type: volume
+        source: mongoConfig
+        target: /data/configdb
+    healthcheck:
+      test: mongosh --eval 'db.runCommand("ping").ok' localhost:27017/test --quiet
+      retries: 5
+      interval: 120s
+      start_period: 30s
+
+  mongo-ui:
+    container_name: mongo-ui
+    image: mongo-express
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - mongo-network
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_ROOT_USER}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_ROOT_PASSWORD}
+      - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_EXPRESS_USER}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD}
+    ports:
+      - "8081:8081"
+
+volumes:
+  mongoDb:
+  mongoConfig:
+
+networks:
+  mongo-network:
+    driver: bridge
